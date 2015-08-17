@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 
+import django
 from django.contrib.contenttypes.models import ContentType
 from django.db import IntegrityError, models, transaction
 from django.db.models.query import QuerySet
@@ -68,8 +69,11 @@ class TagBase(models.Model):
             except IntegrityError:
                 pass
             # Now try to find existing slugs with similar names
-            slugs = set(Tag.objects.filter(slug__startswith=self.slug)
-                                   .values_list('slug', flat=True))
+            slugs = set(
+                self.__class__._default_manager
+                .filter(slug__startswith=self.slug)
+                .values_list('slug', flat=True)
+            )
             i = 1
             while True:
                 slug = self.slugify(self.name, i)
@@ -198,3 +202,7 @@ class TaggedItem(GenericTaggedItemBase, TaggedItemBase):
     class Meta:
         verbose_name = _("Tagged Item")
         verbose_name_plural = _("Tagged Items")
+        if django.VERSION >= (1, 5):
+            index_together = [
+                ["content_type", "object_id"],
+            ]
